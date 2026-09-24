@@ -1,4 +1,4 @@
-﻿# 🧏‍♂️ OmniCaption AI
+# 🧏‍♂️ OmniCaption AI
 
 <div align="center">
 
@@ -11,6 +11,7 @@
   <i>Empowering deaf and hard-of-hearing individuals with instant speech-to-text across meetings, video calls, streaming, and daily conversations.</i>
 </p>
 
+[![Latest Release](https://img.shields.io/github/v/release/msouid/omnicaption-ai?color=brightgreen&label=Download%20Portable%20.zip&logo=windows)](https://github.com/msouid/omnicaption-ai/releases/latest)
 [![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-blue?logo=python&logoColor=white)](https://www.python.org/)
 [![Engine](https://img.shields.io/badge/ASR_Model-Deepgram_Nova--3-8A2BE2?logo=fastapi&logoColor=white)](https://deepgram.com/)
 [![Audio](https://img.shields.io/badge/Audio_Capture-Windows_WASAPI_Loopback-0078D6?logo=windows&logoColor=white)](https://learn.microsoft.com/en-us/windows/win32/coreaudio/loopback-recording)
@@ -84,7 +85,14 @@ flowchart LR
 
 ## 🚀 Quick Start Guide
 
-### Prerequisites
+> 💡 **For Deaf & Non-Technical Users (No Python Needed):**  
+> You can download the ready-to-use standalone package directly:  
+> 👉 **[Download OmniCaption AI v1.0.0 (Windows 64-bit)](https://github.com/msouid/omnicaption-ai/releases/download/v1.0.0/OmniCaption-AI-v1.0.0-Windows-x64.zip)**  
+> Unzip the folder, double-click `OmniCaption_AI.exe`, and start transcribing immediately!
+
+### Developer & Source Code Setup
+
+#### Prerequisites
 * Windows 10 or Windows 11 (64-bit)
 * Python 3.10, 3.11, or 3.12
 * A [Deepgram API Key](https://console.deepgram.com/) *(Free tier provides $200 in free credits)*
