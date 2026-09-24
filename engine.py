@@ -288,9 +288,96 @@ def load_env_file():
 load_env_file()
 
 
+def get_config_dir():
+    """
+    Get user configuration directory. Uses APPDATA on Windows so settings
+    persist across portable and installer versions.
+    """
+    app_data = os.getenv("APPDATA")
+    if app_data:
+        d = os.path.join(app_data, "OmniCaption_AI")
+    else:
+        d = os.path.join(os.path.expanduser("~"), ".omnicaption_ai")
+    try:
+        os.makedirs(d, exist_ok=True)
+        return d
+    except Exception:
+        return os.path.dirname(os.path.abspath(__file__))
+
+
+def get_config_file():
+    return os.path.join(get_config_dir(), "config.json")
+
+
+def load_saved_api_key():
+    """
+    Retrieve API key from:
+    1. Environment variable DEEPGRAM_API_KEY
+    2. User config.json in %APPDATA%/OmniCaption_AI
+    3. Local .env file
+    4. Local config.json next to executable
+    """
+    k = os.environ.get("DEEPGRAM_API_KEY", "").strip()
+    if k:
+        return k
+
+    # Check APPDATA config.json
+    cfg = get_config_file()
+    if os.path.exists(cfg):
+        try:
+            with open(cfg, "r", encoding="utf-8") as f:
+                d = json.load(f)
+                val = d.get("api_key", "").strip()
+                if val:
+                    os.environ["DEEPGRAM_API_KEY"] = val
+                    return val
+        except Exception:
+            pass
+
+    # Check local config.json next to exe/script
+    local_cfg = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
+    if os.path.exists(local_cfg):
+        try:
+            with open(local_cfg, "r", encoding="utf-8") as f:
+                d = json.load(f)
+                val = d.get("api_key", "").strip()
+                if val:
+                    os.environ["DEEPGRAM_API_KEY"] = val
+                    return val
+        except Exception:
+            pass
+
+    return ""
+
+
+def save_api_key(api_key):
+    """
+    Save the user's API key permanently into APPDATA/OmniCaption_AI/config.json.
+    """
+    api_key = api_key.strip()
+    if not api_key:
+        return False
+    os.environ["DEEPGRAM_API_KEY"] = api_key
+    cfg = get_config_file()
+    try:
+        data = {}
+        if os.path.exists(cfg):
+            try:
+                with open(cfg, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+            except Exception:
+                data = {}
+        data["api_key"] = api_key
+        with open(cfg, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+        return True
+    except Exception:
+        return False
+
+
 class AudioTranscriptionEngine:
     def __init__(self, api_key=None):
-        self.api_key = api_key or os.getenv("DEEPGRAM_API_KEY", "")
+        self.api_key = api_key or load_saved_api_key()
         self.is_running = False
         self.thread = None
         self.loop = None

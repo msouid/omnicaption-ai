@@ -1,7 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_all
 
-datas = [('c:/Users/tayar/OneDrive/Bureau/sprint/tools/windows_live_transcriber/predefined_languages_keyterms.json', '.')]
+datas = [('predefined_languages_keyterms.json', '.')]
 binaries = []
 hiddenimports = []
 tmp_ret = collect_all('customtkinter')
@@ -11,7 +11,7 @@ datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
 
 a = Analysis(
-    ['c:/Users/tayar/OneDrive/Bureau/sprint/tools/windows_live_transcriber/app.py'],
+    ['app.py'],
     pathex=[],
     binaries=binaries,
     datas=datas,

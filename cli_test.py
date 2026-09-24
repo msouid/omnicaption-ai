@@ -1,4 +1,4 @@
-﻿"""
+"""
 OmniCaption AI - Console / CMD Live Transcriber Test Runner
 Stream live captions directly to Command Prompt / PowerShell!
 """
@@ -10,12 +10,13 @@ import argparse
 if sys.stdout and hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8')
 
-from engine import AudioTranscriptionEngine, LANGUAGE_MAP, load_external_keyterms
+from engine import AudioTranscriptionEngine, LANGUAGE_MAP, load_external_keyterms, save_api_key
 
 # ANSI Colors for CMD/Terminal
 CYAN = "\033[96m"
 YELLOW = "\033[93m"
 GREEN = "\033[92m"
+RED = "\033[91m"
 MAGENTA = "\033[95m"
 WHITE = "\033[97m"
 GRAY = "\033[90m"
@@ -41,6 +42,21 @@ def main():
     print(f"{GRAY}Press Ctrl+C anytime to stop.{RESET}\n")
 
     engine = AudioTranscriptionEngine()
+    if not engine.api_key:
+        print(f"{YELLOW}🔑 Deepgram API Key not configured.{RESET}")
+        print(f"{WHITE}Get a free key at: {CYAN}https://console.deepgram.com/signup{RESET}\n")
+        try:
+            user_key = input("Enter your Deepgram API Key: ").strip()
+        except (KeyboardInterrupt, EOFError):
+            print("\nExiting.")
+            return
+        if user_key:
+            save_api_key(user_key)
+            engine.api_key = user_key
+            print(f"{GREEN}✓ Key saved permanently! Starting transcription...{RESET}\n")
+        else:
+            print(f"{RED}Cannot start transcription without an API key.{RESET}")
+            return
 
     def on_status(status, is_active):
         color = GREEN if is_active else GRAY

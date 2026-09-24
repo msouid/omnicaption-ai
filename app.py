@@ -12,6 +12,7 @@ import sys
 import os
 import time
 import re
+import webbrowser
 import tkinter as tk
 from tkinter import filedialog, messagebox
 import customtkinter as ctk
@@ -19,7 +20,7 @@ import customtkinter as ctk
 if sys.stdout and hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8')
 
-from engine import AudioTranscriptionEngine, LANGUAGE_MAP
+from engine import AudioTranscriptionEngine, LANGUAGE_MAP, save_api_key, load_saved_api_key
 
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
@@ -72,6 +73,141 @@ def format_subtitle_display(text, max_chars=130):
         else:
             break
     return " ".join(accum_words).strip()
+
+
+class ApiKeyModalDialog(ctk.CTkToplevel):
+    """
+    Onboarding modal dialog prompting the user to enter their Deepgram API Key.
+    """
+    def __init__(self, master, on_saved_callback=None):
+        super().__init__(master)
+        self.master = master
+        self.on_saved_callback = on_saved_callback
+
+        self.title("Setup Deepgram API Key - OmniCaption AI")
+        self.geometry("540x350")
+        self.resizable(False, False)
+        self.attributes("-topmost", True)
+        self.configure(fg_color="#101419")
+
+        # Center on screen
+        sw = self.winfo_screenwidth()
+        sh = self.winfo_screenheight()
+        self.geometry(f"540x350+{(sw - 540) // 2}+{(sh - 350) // 2}")
+
+        self.show_password = False
+
+        # Card container
+        card = ctk.CTkFrame(self, fg_color="#181D24", corner_radius=12, border_width=1, border_color="#263238")
+        card.pack(fill="both", expand=True, padx=16, pady=16)
+
+        # Title
+        lbl_title = ctk.CTkLabel(
+            card,
+            text="🔑 Deepgram API Key Setup",
+            font=ctk.CTkFont(family="Segoe UI", size=20, weight="bold"),
+            text_color="#00E5FF"
+        )
+        lbl_title.pack(anchor="w", padx=20, pady=(18, 4))
+
+        # Description
+        lbl_desc = ctk.CTkLabel(
+            card,
+            text="OmniCaption AI requires a Deepgram API Key for live AI transcription.\nYour key is stored securely on your PC and never shared.",
+            font=ctk.CTkFont(family="Segoe UI", size=12),
+            text_color="#B0BEC5",
+            justify="left"
+        )
+        lbl_desc.pack(anchor="w", padx=20, pady=(0, 10))
+
+        # Free key link
+        lbl_link = ctk.CTkLabel(
+            card,
+            text="👉 Don't have a key? Click to get a free key ($200 credits) →",
+            font=ctk.CTkFont(family="Segoe UI", size=12, underline=True),
+            text_color="#64FFDA",
+            cursor="hand2"
+        )
+        lbl_link.pack(anchor="w", padx=20, pady=(0, 14))
+        lbl_link.bind("<Button-1>", lambda e: webbrowser.open("https://console.deepgram.com/signup"))
+
+        # Input Frame
+        input_frame = ctk.CTkFrame(card, fg_color="transparent")
+        input_frame.pack(fill="x", padx=20, pady=(0, 16))
+
+        curr_key = getattr(self.master.engine, "api_key", "") or ""
+        self.entry_key = ctk.CTkEntry(
+            input_frame,
+            placeholder_text="Enter your Deepgram API Key here...",
+            font=ctk.CTkFont(family="Consolas", size=13),
+            show="*",
+            height=38,
+            fg_color="#0E1217",
+            border_color="#37474F"
+        )
+        self.entry_key.pack(side="left", fill="x", expand=True, padx=(0, 6))
+        if curr_key:
+            self.entry_key.insert(0, curr_key)
+
+        self.btn_eye = ctk.CTkButton(
+            input_frame,
+            text="👁",
+            width=38,
+            height=38,
+            font=ctk.CTkFont(size=14),
+            fg_color="#263238",
+            hover_color="#37474F",
+            command=self._toggle_show
+        )
+        self.btn_eye.pack(side="right")
+
+        # Action Buttons
+        btn_frame = ctk.CTkFrame(card, fg_color="transparent")
+        btn_frame.pack(fill="x", padx=20, pady=(6, 12))
+
+        self.btn_save = ctk.CTkButton(
+            btn_frame,
+            text="💾  Save Key & Continue",
+            font=ctk.CTkFont(family="Segoe UI", size=14, weight="bold"),
+            fg_color="#00C853",
+            hover_color="#00E676",
+            height=38,
+            command=self._save_and_close
+        )
+        self.btn_save.pack(side="right", padx=(8, 0))
+
+        btn_cancel = ctk.CTkButton(
+            btn_frame,
+            text="Cancel",
+            font=ctk.CTkFont(family="Segoe UI", size=13),
+            fg_color="#37474F",
+            hover_color="#455A64",
+            height=38,
+            command=self.destroy
+        )
+        btn_cancel.pack(side="right")
+
+        self.grab_set()
+
+    def _toggle_show(self):
+        self.show_password = not self.show_password
+        self.entry_key.configure(show="" if self.show_password else "*")
+        self.btn_eye.configure(text="🔒" if self.show_password else "👁")
+
+    def _save_and_close(self):
+        val = self.entry_key.get().strip()
+        if not val or len(val) < 20:
+            messagebox.showwarning(
+                "Invalid Key",
+                "Please enter a valid Deepgram API Key.\n\nSign up at https://console.deepgram.com to get your key.",
+                parent=self
+            )
+            return
+        save_api_key(val)
+        self.master.engine.api_key = val
+        if self.on_saved_callback:
+            self.on_saved_callback(val)
+        self.destroy()
 
 
 class FloatingDesktopTranscriptBox(ctk.CTkToplevel):
@@ -298,6 +434,8 @@ class OmniCaptionApp(ctk.CTk):
         self.transcript_records = []
 
         self._build_ui()
+        if not self.engine.api_key:
+            self.after(350, self.open_api_key_dialog)
 
     def _build_ui(self):
         # 1. Header Frame
@@ -326,6 +464,18 @@ class OmniCaptionApp(ctk.CTk):
         # Right status & VU box
         status_box = ctk.CTkFrame(header_frame, fg_color="transparent")
         status_box.pack(side="right", padx=16, pady=12)
+
+        self.btn_api_key = ctk.CTkButton(
+            status_box,
+            text="🔑 API Key",
+            width=78,
+            height=26,
+            font=ctk.CTkFont(family="Segoe UI", size=11, weight="bold"),
+            fg_color="#263238",
+            hover_color="#37474F",
+            command=self.open_api_key_dialog
+        )
+        self.btn_api_key.pack(side="left", padx=(0, 10))
 
         self.status_dot = ctk.CTkLabel(
             status_box,
@@ -572,8 +722,18 @@ class OmniCaptionApp(ctk.CTk):
         for spk_id, hex_color in SPEAKER_COLORS.items():
             tb_hist.tag_config(f"spk_{spk_id}", foreground=hex_color, font=("Segoe UI", sz, "bold"))
 
+    def open_api_key_dialog(self):
+        ApiKeyModalDialog(self, on_saved_callback=self._on_api_key_saved)
+
+    def _on_api_key_saved(self, new_key):
+        self.status_lbl.configure(text="Key Saved (Ready)")
+
     def toggle_transcription(self):
         if not self.engine.is_running:
+            if not getattr(self.engine, "api_key", None):
+                self.open_api_key_dialog()
+                return
+
             src_str = self.source_var.get()
             if "Microphone" in src_str:
                 mode = "mic"
