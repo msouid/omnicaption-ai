@@ -1,0 +1,7 @@
+﻿# OmniCaption AI - Real-Time Live Transcriber Requirements
+customtkinter>=5.2.0
+pyaudiowpatch>=0.2.12.6
+websockets>=12.0
+numpy>=1.26.0
+truststore>=0.9.0
+darkdetect>=0.8.0
